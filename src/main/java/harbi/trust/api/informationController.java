@@ -9,20 +9,19 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-
+import harbi.trust.config.DataService;
 import harbi.trust.config.JwtService;
 import harbi.trust.model.AppUser;
-import harbi.trust.model.Car;
-import lombok.RequiredArgsConstructor;
-
-
-import java.util.ArrayList;
-import java.util.List;
-import harbi.trust.model.Role;
+import harbi.trust.model.AppUserDTO;
+import harbi.trust.model.CarDTO;
 import harbi.trust.repo.CarRepo;
 import harbi.trust.repo.UserRepo;
-import java.util.Optional;
+import harbi.trust.model.Role;
+import lombok.RequiredArgsConstructor;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.Collections;
 
 @CrossOrigin
@@ -31,79 +30,88 @@ import java.util.Collections;
 @RequestMapping("/api/v1/info")
 public class informationController {
 
-    private final informationService Iservice;
-
+    private final informationService informationService;
     private final JwtService jwtService;
-
     private final UserRepo userRepo;
-
     private final CarRepo carRepo;
-    
+    private final DataService dataService;
+
+    // Get Car by ID with owners info in DTO form
     @GetMapping("/car")
-    public ResponseEntity<Car> getCar(@RequestHeader("Authorization") String token){
-        return ResponseEntity.ok(carRepo.findById(101).get());
+    public ResponseEntity<CarDTO> getCar(@RequestHeader("Authorization") String token){
+        CarDTO carDTO = dataService.convertToCarDTO(carRepo.findById(101).get());
+        return ResponseEntity.ok(carDTO);
     }
-    //@PreAuthorize
+
+    // Get all users (for admin only)
     @GetMapping("/everyuser")
-    public ResponseEntity<List<AppUser>> getList(@RequestHeader("Authorization") String token) {
-        // Remove "Bearer " prefix from the token
-        token = token.substring(7);
+    public ResponseEntity<List<AppUserDTO>> getList(@RequestHeader("Authorization") String token) {
+        token = token.substring(7); // Remove "Bearer " prefix from the token
 
         String email = jwtService.extractUsername(token);
+        Optional<AppUser> findRole = userRepo.findByEmail(email);
 
-        Optional<AppUser> find_role = userRepo.findByEmail(email);
-        AppUser fond = find_role.get();
-
-        if (fond.getRole() == Role.ADMIN) {
-            return ResponseEntity.ok(Iservice.getUsers());
-         } else {
-            List<Car> emptyCarList = new ArrayList<>();
-            AppUser customUser = new AppUser(666, "Sorry", "You are", "Not able to see", "Others", Role.USER,emptyCarList);
-            return ResponseEntity.ok(Collections.singletonList(customUser));
-            
+        if (findRole.isPresent()) {
+            AppUser foundUser = findRole.get();
+            if (foundUser.getRole() == Role.ADMIN) {
+                List<AppUserDTO> usersDTO = informationService.getUsers().stream()
+                        .map(dataService::convertToAppUserDTO)
+                        .collect(Collectors.toList());
+                return ResponseEntity.ok(usersDTO);
+            } else {
+                // Return custom message for non-admins
+                //List<Car> emptyCarList = new ArrayList<>();
+                AppUserDTO customUser = AppUserDTO.builder()
+                        .id(666)
+                        .email("Sorry")
+                        .firstname("You are")
+                        .lastname("Not able to see")
+                        .carIds(Collections.emptyList())
+                        .build();
+                return ResponseEntity.ok(Collections.singletonList(customUser));
+            }
         }
+        return ResponseEntity.status(403).build(); // Unauthorized
     }
-    
+
+    // Get the logged-in user's own details
     @GetMapping("/user")
-    public ResponseEntity<List<AppUser>> getOne(@RequestHeader("Authorization") String token) {
-        // Remove "Bearer " prefix from the token
-        token = token.substring(7);
+    public ResponseEntity<AppUserDTO> getOne(@RequestHeader("Authorization") String token) {
+        token = token.substring(7); // Remove "Bearer " prefix
 
         String email = jwtService.extractUsername(token);
+        Optional<AppUser> findRole = userRepo.findByEmail(email);
 
-        Optional<AppUser> find_role = userRepo.findByEmail(email);
-        AppUser fond = find_role.get();
-        return ResponseEntity.ok(Collections.singletonList(fond));
-
+        if (findRole.isPresent()) {
+            AppUser foundUser = findRole.get();
+            AppUserDTO userDTO = dataService.convertToAppUserDTO(foundUser);
+            return ResponseEntity.ok(userDTO);
+        }
+        return ResponseEntity.notFound().build(); // If not found
     }
 
+    // Update logged-in user's details
     @PostMapping("/changeuser")
-    public ResponseEntity<AppUser> changeOne(@RequestHeader("Authorization") String token, @RequestBody ChangeRequest request) {
-        // Remove "Bearer " prefix from the token
-        token = token.substring(7);
+    public ResponseEntity<AppUserDTO> changeOne(@RequestHeader("Authorization") String token, @RequestBody ChangeRequest request) {
+        token = token.substring(7); // Remove "Bearer " prefix
     
-        // Extract the username from the token
         String email = jwtService.extractUsername(token);
-    
-        // Find the user by email
-        Optional<AppUser> find_role = userRepo.findByEmail(email);
-        if (find_role.isPresent()) {
-            AppUser userToUpdate = find_role.get();
-    
-            // Update the fields of AppUser with the new information from ChangeRequest
+        Optional<AppUser> findRole = userRepo.findByEmail(email);
+
+        if (findRole.isPresent()) {
+            AppUser userToUpdate = findRole.get();
+
+            // Update fields
             userToUpdate.setFirstname(request.getFirstname());
             userToUpdate.setLastname(request.getLastname());
-    
-            // Save the updated user back to the database
-            userRepo.save(userToUpdate);
-    
-            // Return the updated user
-            return ResponseEntity.ok(userToUpdate);
-        } else {
-            // If the user is not found, return a 404 Not Found response
-            return ResponseEntity.notFound().build();
-        }
-    }
-    
 
+            // Save updated user
+            userRepo.save(userToUpdate);
+
+            // Convert to DTO and return updated user
+            AppUserDTO updatedUserDTO = dataService.convertToAppUserDTO(userToUpdate);
+            return ResponseEntity.ok(updatedUserDTO);
+        }
+        return ResponseEntity.notFound().build(); // User not found
+    }
 }
