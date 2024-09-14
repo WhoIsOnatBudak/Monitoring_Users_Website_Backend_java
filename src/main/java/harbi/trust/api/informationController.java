@@ -12,10 +12,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 import harbi.trust.config.JwtService;
 import harbi.trust.model.AppUser;
+import harbi.trust.model.Car;
 import lombok.RequiredArgsConstructor;
 
+
+import java.util.ArrayList;
 import java.util.List;
 import harbi.trust.model.Role;
+import harbi.trust.repo.CarRepo;
 import harbi.trust.repo.UserRepo;
 import java.util.Optional;
 
@@ -32,8 +36,13 @@ public class informationController {
     private final JwtService jwtService;
 
     private final UserRepo userRepo;
-    
 
+    private final CarRepo carRepo;
+    
+    @GetMapping("/car")
+    public ResponseEntity<Car> getCar(@RequestHeader("Authorization") String token){
+        return ResponseEntity.ok(carRepo.findById(101).get());
+    }
     //@PreAuthorize
     @GetMapping("/everyuser")
     public ResponseEntity<List<AppUser>> getList(@RequestHeader("Authorization") String token) {
@@ -48,7 +57,8 @@ public class informationController {
         if (fond.getRole() == Role.ADMIN) {
             return ResponseEntity.ok(Iservice.getUsers());
          } else {
-            AppUser customUser = new AppUser(666, "Sorry", "You are", "Not able to see", "Others", Role.USER);
+            List<Car> emptyCarList = new ArrayList<>();
+            AppUser customUser = new AppUser(666, "Sorry", "You are", "Not able to see", "Others", Role.USER,emptyCarList);
             return ResponseEntity.ok(Collections.singletonList(customUser));
             
         }
