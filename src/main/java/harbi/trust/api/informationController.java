@@ -14,9 +14,11 @@ import harbi.trust.config.JwtService;
 import harbi.trust.model.AppUser;
 import harbi.trust.model.AppUserDTO;
 import harbi.trust.model.CarDTO;
-import harbi.trust.repo.CarRepo;
+import harbi.trust.repo.UserCarRepo;
+import harbi.trust.model.Car;
 import harbi.trust.repo.UserRepo;
 import harbi.trust.model.Role;
+import harbi.trust.model.UserCarId;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
@@ -33,14 +35,46 @@ public class informationController {
     private final informationService informationService;
     private final JwtService jwtService;
     private final UserRepo userRepo;
-    private final CarRepo carRepo;
+    //private final CarRepo carRepo;
     private final DataService dataService;
+    private final UserCarRepo userCarRepo;
+
+
+@PostMapping("/delete")
+public ResponseEntity<Void> deleteRel(@RequestHeader("Authorization") String token, @RequestBody CarUserRequest request) {
+    // Extract userId and carId from the request
+    long userId = request.getUserId();
+    long carId = request.getCarId();
+    
+    // Create UserCarId object using the extracted IDs
+    UserCarId userCarId = new UserCarId(userId, carId);
+    
+    // Call the repository method to delete the record
+    userCarRepo.deleteById(userCarId);
+
+    // Return a response indicating successful deletion
+    return ResponseEntity.ok().build();
+}
+
 
     // Get Car by ID with owners info in DTO form
-    @GetMapping("/car")
-    public ResponseEntity<CarDTO> getCar(@RequestHeader("Authorization") String token){
-        CarDTO carDTO = dataService.convertToCarDTO(carRepo.findById(101).get());
-        return ResponseEntity.ok(carDTO);
+    @PostMapping("/car")
+    public ResponseEntity<List<CarDTO>> getCar(@RequestHeader("Authorization") String token, @RequestBody CarRequest request) {
+    
+
+        int idForUser = request.getId();
+
+        AppUser UserForCar = userRepo.findById(idForUser).get();
+        
+        List<Car> CarToReturn = UserForCar.getCars();
+    
+        // Convert each Car to CarDTO
+        List<CarDTO> carDTOList = CarToReturn.stream()
+            .map(car -> dataService.convertToCarDTO(car))
+            .collect(Collectors.toList());
+    
+        // Return the list of CarDTOs
+        return ResponseEntity.ok(carDTOList);
     }
 
     // Get all users (for admin only)
