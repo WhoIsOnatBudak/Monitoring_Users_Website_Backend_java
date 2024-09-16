@@ -40,21 +40,21 @@ public class informationController {
     private final UserCarRepo userCarRepo;
 
 
-@PostMapping("/delete")
-public ResponseEntity<Void> deleteRel(@RequestHeader("Authorization") String token, @RequestBody CarUserRequest request) {
-    // Extract userId and carId from the request
-    long userId = request.getUserId();
-    long carId = request.getCarId();
-    
-    // Create UserCarId object using the extracted IDs
-    UserCarId userCarId = new UserCarId(userId, carId);
-    
-    // Call the repository method to delete the record
-    userCarRepo.deleteById(userCarId);
+    @PostMapping("/delete")
+    public ResponseEntity<Void> deleteRel(@RequestHeader("Authorization") String token, @RequestBody CarUserRequest request) {
+        // Extract userId and carId from the request
+        long userId = request.getUserId();
+        long carId = request.getCarId();
+        
+        // Create UserCarId object using the extracted IDs
+        UserCarId userCarId = new UserCarId(userId, carId);
+        
+        // Call the repository method to delete the record
+        userCarRepo.deleteById(userCarId);
 
-    // Return a response indicating successful deletion
-    return ResponseEntity.ok().build();
-}
+        // Return a response indicating successful deletion
+        return ResponseEntity.ok().build();
+    }
 
 
     // Get Car by ID with owners info in DTO form

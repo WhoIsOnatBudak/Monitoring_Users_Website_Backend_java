@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import harbi.trust.model.AppUser;
 import harbi.trust.model.AppUserDTO;
 import harbi.trust.model.CarDTO;
+import harbi.trust.model.CheapCar;
+import harbi.trust.model.SuperCar;
 import harbi.trust.model.Car;
 
 @Service
@@ -22,8 +24,8 @@ public class DataService {
             .collect(Collectors.toList()))
         .build();
     }
-    public CarDTO convertToCarDTO(Car car){
-        return CarDTO.builder()
+    public CarDTO convertToCarDTO(Car car) {
+        CarDTO.CarDTOBuilder builder = CarDTO.builder()
             .id(car.getId())
             .make(car.getMake())
             .model(car.getModel())
@@ -31,7 +33,18 @@ public class DataService {
             .licensePlate(car.getLicensePlate())
             .ownerIds(car.getOwners().stream()
                 .map(AppUser::getId)
-                .collect(Collectors.toList()))
-            .build();
+                .collect(Collectors.toList()));
+
+        // Check the type of the car and set subtype-specific fields
+        if (car instanceof SuperCar) {
+            builder.horsepower(((SuperCar) car).getHorsepower());
+            builder.type("SUPER");
+        } else if (car instanceof CheapCar) {
+            builder.price(((CheapCar) car).getPrice());
+            builder.type("CHEAP");
+        }
+
+        return builder.build();
     }
+
 }

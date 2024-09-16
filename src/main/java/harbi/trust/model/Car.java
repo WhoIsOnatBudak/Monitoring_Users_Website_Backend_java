@@ -2,11 +2,14 @@ package harbi.trust.model;
 
 import java.util.List;
 
-
+import jakarta.persistence.DiscriminatorColumn;
+import jakarta.persistence.DiscriminatorType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Inheritance;
+import jakarta.persistence.InheritanceType;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -19,6 +22,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 @Entity
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)  // All subclasses will be in one table
+@DiscriminatorColumn(name = "car_type", discriminatorType = DiscriminatorType.STRING)  // Column to indicate car type
 @Table(name = "cars")
 public class Car {
     @Id
